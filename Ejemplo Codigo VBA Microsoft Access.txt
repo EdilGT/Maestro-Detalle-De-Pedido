@@ -1,0 +1,38 @@
+    'Conexion a Sql Server
+    If cnn.State = 0 Then Conexion
+    Set cmd = New ADODB.Command
+    
+    'Guardar Registro Nuevo
+        If Opcion = 0 Then 'Para Guardar registro con SP
+            Me.Id = Correlativos("Tbl_Almacen", 0, Me)
+            vId = Me.Id
+            With cmd
+                .ActiveConnection = cnn
+                .CommandType = adCmdStoredProc
+                .CommandText = "SP_Tbl_Almacen"
+                .Parameters.Refresh
+                .Parameters("@Opcion").Value = 0
+                .Parameters("@IdAlmacen").Value = Me.Id
+                .Parameters("@Nombre").Value = Me.Nombre
+                .Execute
+            End With
+            
+            Dim Mensaje As String
+            Mensaje = cmd.Parameters("@Mensaje").Value
+            MsgBox Mensaje, vbInformation, "Aviso"
+        ElseIf Me.Opcion = 1 Then 'Es Para Modificar Opcicon <> 1
+            With cmd
+                .ActiveConnection = cnn
+                .CommandType = adCmdStoredProc
+                .CommandText = "SP_Tbl_Almacen"
+                .Parameters.Refresh
+                .Parameters("@Opcion").Value = 1
+                .Parameters("@IdAlmacen").Value = Me.Id
+                .Parameters("@Nombre").Value = Me.Nombre
+                .Execute
+            End With
+            
+            Dim Mensajex As String
+            Mensajex = cmd.Parameters("@Mensaje").Value
+            MsgBox Mensajex, vbInformation, "Aviso"
+        End If
