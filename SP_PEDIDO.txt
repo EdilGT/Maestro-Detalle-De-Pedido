@@ -1,0 +1,71 @@
+Create Type EDetalle_Pedido as table(
+	Id_Producto int null,
+	Id_PedidoM int null,
+	Codigo varchar(10) null,
+	Descripcion varchar(100) null,
+	Cantidad decimal(18,2) null,
+	Precio decimal(12,2) null,
+	Total_Precio decimal(18,2) null
+)
+go
+
+Create Proc SP_Pedido
+--Definir Parametros
+	@Opcion int,
+	@Mensaje varchar(100) out,
+	@Id_PedidoM int,
+	@Id_Cliente int,
+	@Fecha_Pedido date,
+	@Observaciones varchar(200)=null,
+	@Total_Pedido decimal(18,2)=null,
+	@Detalle_Pedido EDetalle_Pedido readonly
+	as
+	begin
+		begin try
+
+			if @Opcion=0 --Guardar Pedido
+			begin
+				begin Transaction;
+
+					insert into Pedido (Id_PedidoM,Id_Cliente,Fecha_Pedido,Observaciones,Total_Pedido)
+								values (@Id_PedidoM,@Id_Cliente,@Fecha_Pedido,@Observaciones,@Total_Pedido)
+
+					Declare @Id_Pedido int;
+					set @Id_Pedido = IDENT_CURRENT('Pedido')
+					insert into Pedido_Detalle (Id_Producto,Id_Pedido,Id_PedidoM,Codigo,Descripcion,Cantidad,Precio,Total_Precio)
+					select Id_Producto,@Id_Pedido,@Id_PedidoM,Codigo,Descripcion,Cantidad,Precio,Total_Precio from @Detalle_Pedido
+				
+					set @Mensaje='Pedido Guardado Correctamente'
+
+				commit;
+			end
+			else if @Opcion=1 --Modificar Pedido
+			begin
+				begin Transaction;
+
+					update Pedido set Id_Cliente=@Id_Cliente,Fecha_Pedido=@Fecha_Pedido,Observaciones=@Observaciones,Total_Pedido=@Total_Pedido
+					where Id_PedidoM=@Id_PedidoM
+
+					delete from Pedido_Detalle where Id_PedidoM=@Id_PedidoM
+
+					insert into Pedido_Detalle (Id_Producto,Id_Pedido,Id_PedidoM,Codigo,Descripcion,Cantidad,Precio,Total_Precio)
+					select Id_Producto,@Id_Pedido,@Id_PedidoM,Codigo,Descripcion,Cantidad,Precio,Total_Precio from @Detalle_Pedido
+
+					set @Mensaje='Pedido Modificado Correctamente'
+
+				commit;
+			end
+			else
+			begin
+				set @Mensaje='Opcion Incorrecta'
+			end
+		end try
+		begin catch
+			if @@trancount > 0
+				rollback;
+			declare @ErrorMessage nvarchar(4000), @ErrorSeverity int, @ErrorState int;
+			select @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+			--raiserror (@ErrorMessage, @ErrorSeverity, @ErrorState);
+			set @Mensaje='Error al Guardar o Modificar el Pedido'
+		end catch
+	end
